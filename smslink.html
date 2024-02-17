@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <title>BodyPark型动公园</title>
+    <script>
+        window.onerror = e => {
+            console.error(e)
+            // alert('发生错误' + e)
+        }
+    </script>
+    <!-- weui 样式 -->
+    <link rel="stylesheet" href="https://res.wx.qq.com/open/libs/weui/2.4.1/weui.min.css">
+    </link>
+    <!-- 调试用的移动端 console -->
+    <!-- <script src="https://cdn.jsdelivr.net/npm/eruda"></script> -->
+    <!-- <script>eruda.init();</script> -->
+    <!-- 微信浏览器内部console -->
+    <!-- https://github.com/Tencent/vConsole/blob/dev/README_CN.md -->
+    <script src="https://unpkg.com/vconsole@latest/dist/vconsole.min.js"></script>
+    <!-- 公众号 JSSDK -->
+    <script src="https://res.wx.qq.com/open/js/jweixin-1.6.0.js"></script>
+    <!-- 云开发 Web SDK -->
+    <script src="https://res.wx.qq.com/open/js/cloudbase/1.1.0/cloud.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="https://libs.baidu.com/jquery/2.0.0/jquery.min.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/blueimp-md5/2.18.0/js/md5.js"></script>
+    <style>
+        * {
+            margin: 0;
+            border: 0;
+            padding: 0;
+        }
+
+        .main_body {
+            width: 100vw;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #fff;
+            padding-bottom: 364px;
+            padding-top: 206px;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="main_body">
+        <!-- pc浏览器布局或无法检测的设备 ps:理论上不会出现这个case-->
+        <div class="hidden" id="pc-container">
+            <div>请在手机浏览器中打开</div>
+        </div>
+        <!-- 手机浏览器布局 -->
+        <div class="hidden" id="mobile-container">
+            <div onclick="handleGoToLeads()">免费领取，立即开练</div>
+        </div>
+        <!-- 微信浏览器布局 -->
+        <div class="weixin-container hidden" id="wechat-container">
+            <wx-open-launch-weapp id="launch-btn" username="gh_256a2a4cf18c"
+                path="/pages/leadsCourse/userServer/userServer">
+                <template>免费领取，立即开练</button>
+                </template>
+            </wx-open-launch-weapp>
+        </div>
+
+    </div>
+</body>
+<script lang="js">
+    //检测是否是微信浏览器的方法
+    function checkWeiXin() {
+        var ua = navigator.userAgent.toLowerCase()
+        var isWXWork = ua.match(/wxwork/i) == 'wxwork'
+        var isWeixin = !isWXWork && ua.match(/micromessenger/i) == 'micromessenger'
+        return isWeixin
+    }
+    function docReady(fn) {
+        if (document.readyState === 'complete' || document.readyState === 'interactive') {
+            fn()
+        } else {
+            document.addEventListener('DOMContentLoaded', fn())
+        }
+    }
+    docReady(function () {
+        //如果在测试环境或者beta环境，打卡vConsole调试器
+        if (window.location.href.search(RegExp(/test.bodypark.cn/)) >= 0 || window.location.href.search(RegExp(/beta.bodypark.cn/)) >= 0) {
+            var vConsole = new window.VConsole();
+        }
+        var isWeixin = checkWeiXin()
+        if (isWeixin) {
+            console.log('isWeixin')
+            let key = md5('wxd7425cc8762eed5d:049f7c497b2330c39dd891f36a0d8775');
+            var weiXin = function (response) {
+                console.log("debug resp", response.timestamp)
+                console.log("debug resp", response.noncestr)
+                console.log("debug resp", response.signature)
+
+                let containerEl = document.getElementById('wechat-container')
+                containerEl.classList.remove('hidden')
+                let path = `/pages/leadsCourse/userServer/userServer`
+                launchBtn.setAttribute("path", path);
+
+                wx.config({
+                    // debug: true, // 调试时可开启
+                    appId: 'wxd7425cc8762eed5d', // <!-- replace -->
+                    timestamp: parseInt(response.timestamp), // 必填，填任意数字即可
+                    nonceStr: response.noncestr, // 必填，填任意非空字符串即可
+                    signature: response.signature, // 必填，填任意非空字符串即可
+                    jsApiList: ['chooseImage'], // 必填，随意一个接口即可 
+                    openTagList: ['wx-open-launch-weapp'], // 填入打开小程序的开放标签名
+                })
+            }
+
+            $.ajax({
+                type: "GET",
+                url: "/fitlive/wechat/getAccessSignatureOfJS",
+                dataType: "json",
+                data: {
+                    secret: key,
+                    url: window.location.href,
+                },
+                success: function (response) {
+                    weiXin(response)
+                },
+            })
+        }
+
+        else {
+            linkToLink()
+        }
+    })
+    function handleGoToLeads() {
+        if (document.readyState === 'complete' || document.readyState === 'interactive') {
+            linkToLink()
+        } else {
+            document.addEventListener('DOMContentLoaded', linkToLink())
+        }
+    }
+    async function linkToLink() {
+        var isWeixin = checkWeiXin()
+        var isMobile = false
+        var isDesktop = false
+        if (navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|IEMobile)/i)) {
+            isMobile = true
+            let containerEl = document.getElementById('mobile-container')
+            containerEl.classList.remove('hidden')
+        } else {
+            isDesktop = true
+            var containerEl = document.getElementById('pc-container')
+            containerEl.classList.remove('hidden')
+        }
+
+        if (isWeixin) {
+            console.log('isWeixin')
+            let key = md5('wxd7425cc8762eed5d:049f7c497b2330c39dd891f36a0d8775');
+            var weiXin = function (response) {
+                wx.config({
+                    // debug: true, // 调试时可开启
+                    appId: 'wxd7425cc8762eed5d', // <!-- replace -->
+                    timestamp: parseInt(response.timestamp), // 必填，填任意数字即可
+                    nonceStr: response.noncestr, // 必填，填任意非空字符串即可
+                    signature: response.signature, // 必填，填任意非空字符串即可
+                    jsApiList: ['chooseImage'], // 必填，随意一个接口即可 
+                    openTagList: ['wx-open-launch-weapp'], // 填入打开小程序的开放标签名
+                })
+            }
+
+            $.ajax({
+                type: "GET",
+                url: "/fitlive/wechat/getAccessSignatureOfJS",
+                dataType: "json",
+                data: {
+                    secret: key,
+                    url: window.location.href,
+                },
+                success: function (response) {
+                    weiXin(response)
+                },
+            })
+
+        }
+        else if (isDesktop) {
+            alert("请在手机中打开")
+        }
+        else {
+            console.log('not Weixin not PC')
+            try {
+                await openWeapp(() => {
+                })
+            } catch (e) {
+                throw e
+            }
+        }
+    }
+    async function openWeapp(onBeforeJump) {
+
+        axios.post(`https://${location.hostname}/fitlive/wechat/getOpenlink`, {
+            "jumpWxa":
+            {
+                "path": "/pages/leadsCourse/userServer/userServer",
+            }
+        }, {}).then(res => {
+            location.href = res.data
+        })
+    }
+
+</script>
+
+</html>
